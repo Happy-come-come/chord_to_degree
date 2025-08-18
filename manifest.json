@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "ChordWiki: コード → ディグリー",
+  "description": "ChordWikiのコード名をディグリー表示に変換します。",
+  "version": "1.0.0.5",
+  "icons": {
+    "128": "icons/128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://ja.chordwiki.org/wiki*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": ["https://ja.chordwiki.org/*"],
+  "action": {
+    "default_title": "ChordWiki Degree"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "chordwiki-degree@example.com",
+      "strict_min_version": "109.0"
+    }
+  }
+}
