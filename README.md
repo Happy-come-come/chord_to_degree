@@ -2,10 +2,11 @@
 ja.chordwiki.orgのキーが明記されいるページのコード名をディグリーに変換（キー未表記ページは推定）
 
 tampermonkey: https://www.tampermonkey.net/<br>
-をインストールして
+をインストールして<br>
 https://greasyfork.org/ja/scripts/546170<br>
 ここからスクリプトを入れるのがいいと思います(自動更新してくれるので)
 <br>
+https://github.com/Happy-come-come/chord_to_degree/releases/latest<br>
 一応拡張機能版も置いておきますが自動更新されないのでお試し用で……<br>
 <br>
 - 右下の「Ⅰ」ボタン「C」ボタンを押すとコード名とディグリーの切り替え
