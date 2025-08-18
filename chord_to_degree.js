@@ -2,7 +2,7 @@
 // @name			[chordwiki] コード to ディグリー
 // @description			ja.chordwiki.orgのキーが明記されいるページのコード名をディグリーに変換（キー未表記ページは推定）
 // @namespace		https://greasyfork.org/ja/users/1023652
-// @version			1.0.0.4
+// @version			1.0.0.6
 // @author			ゆにてぃー
 // @match			https://ja.chordwiki.org/wiki*
 // @icon			https://www.google.com/s2/favicons?sz=64&domain=ja.chordwiki.org
@@ -32,6 +32,7 @@
 		attachLineKeyHandlers(); // 変更伝播（「-」継承の再計算）
 		hookPlayKeyObserver(); // Play: 変更検出（グローバルキーありページ）
 		await restoreSavedSelections();
+		addTransposeBar();
 		applyResponsiveLayout();
 	}
 
@@ -140,6 +141,78 @@
 		document.body.appendChild(btn);
 	}
 
+	// 移調用
+	function addTransposeBar(){
+		if(document.getElementById("cw-transpose-bar")) return;
+
+		const hook = document.querySelector('div[oncopy], div[onCopy]');
+		if(!hook || !hook.parentNode) return;
+
+		const currMajor = getCurrentMajorKeyForTranspose();
+
+		// UI要素
+		const label = h('span', {
+			id: 'cw-transpose-label',
+			textContent: `現在 key: ${currMajor}`,
+			style: { marginRight: '8px', fontWeight: '600' }
+		});
+
+		const sel = h('select', {
+			id: 'cw-transpose-select',
+			title: '移動先のキー（C/Am など）',
+			style: { marginRight: '8px', padding: '2px 6px', fontSize: '12px' }
+		});
+		for(const [maj, relm] of TRANSPOSE_PAIRS){
+			const opt = document.createElement('option');
+			opt.value = maj;
+			opt.textContent = `${maj} (${relm})`;
+			sel.appendChild(opt);
+		}
+		// 既定は C(Am)
+		sel.value = 'C';
+
+		const btn = h('button', {
+			id: 'cw-transpose-go',
+			textContent: 'key に移動',
+			title: '選択したキーに移調したページへ移動します',
+			onClick: ()=>{
+				const fromMaj = getCurrentMajorKeyForTranspose();
+				const toMaj = sel.value || 'C';
+				const url = buildTransposeUrl(toMaj);
+				location.href = url;
+			},
+			onmouseenter: (e)=>{ e.currentTarget.style.filter = 'brightness(0.96)'; },
+			onmouseleave: (e)=>{ e.currentTarget.style.filter = ''; },
+			style: {
+				padding: '4px 10px',
+				border: '1px solid #d1d5db',
+				background: '#fff',
+				borderRadius: '6px',
+				cursor: 'pointer',
+				fontSize: '12px'
+			}
+		});
+
+		// ラッパー
+		const bar = h('div', {
+			id: 'cw-transpose-bar',
+			style: {
+				display: 'flex',
+				alignItems: 'center',
+				flexWrap: 'wrap',
+				gap: '6px',
+				margin: '8px 0 12px 0',
+				padding: '8px 10px',
+				border: '1px solid #e5e7eb',
+				background: '#f9fafb',
+				borderRadius: '8px'
+			}
+		}, label, sel, btn);
+
+		// oncopy コンテナの直前に差し込む
+		hook.parentNode.insertBefore(bar, hook);
+	}
+
 	// ===== ローマ数字基礎 =====
 	const ROMAN = ["Ⅰ","Ⅱ","Ⅲ","Ⅳ","Ⅴ","Ⅵ","Ⅶ"];
 
@@ -165,7 +238,7 @@
 	const PC_TO_FLAT = ["C","Db","D","Eb","E","F","Gb","G","Ab","A","Bb","B"];
 
 	function nameToPc(name){
-		const n = (name || "").trim();
+		const n = (typeof name === "string" ? name : String(name ?? "")).trim();
 		return NOTE_TO_PC[n] != null ? NOTE_TO_PC[n] : null;
 	}
 	function pcToName(pc,prefer = "either"){
@@ -771,7 +844,7 @@
 			}
 			if(touched && isDeg){
 				if(timer)clearTimeout(timer);
-				timer = setTimeout(()=>{convertDocument("deg");},120);
+				timer = setTimeout(()=>{convertDocument("deg");updateTransposeBarLabel();},120);
 			}
 		});
 		obs.observe(document.body,{subtree:true,childList:true,characterData:true});
@@ -870,7 +943,134 @@
 			}
 		}
 	}
+	const TRANSPOSE_PAIRS = [
+		["C",  "Am"],
+		["Db", "Bbm"],
+		["D",  "Bm"],
+		["Eb", "Cm"],
+		["E",  "C#m"],
+		["F",  "Dm"],
+		["F#", "D#m"],
+		["G",  "Em"],
+		["Ab", "Fm"],
+		["A",  "F#m"],
+		["Bb", "Gm"],
+		["B",  "G#m"],
+	];
+	function getCurrentMajorKeyForTranspose(){
+		// 1) まずページの p.key（Play/Key/原曲キー）を最優先で使う
+		const pk = document.querySelector("p.key");
+		let raw = pk ? extractKeyFromParagraph(pk) : null;
 
+		// 2) それが無い場合は、setupLineKeyUI/seedKeysByBlocks で付与済みの
+		//    行ごとの推定キー（effectiveKey）を利用（最初に見つかったもの）
+		if(!raw){
+			const lines = [...document.querySelectorAll("p.line")].filter(l => l.className === "line");
+			for(const line of lines){
+				const eff = (line.dataset && line.dataset.effectiveKey) ? line.dataset.effectiveKey.trim() : "";
+				if(eff){
+					raw = eff;
+					break;
+				}
+			}
+		}
+
+		// 3) それでも無ければデフォルト C
+		if(!raw) raw = "C";
+
+		// 4) C(Am) の “C” に合わせて、もし minor なら相対メジャーへ寄せる
+		const s = splitKeyName(raw);
+		return s.isMinor ? relativeMajorName(raw) : s.tonic;
+	}
+	// [-5, +6] の範囲に収まるように差（半音数）を決定
+	function computeDeltaSemitone(fromMajor, toMajor){
+		const a = nameToPc(fromMajor);
+		const b = nameToPc(toMajor);
+		if(a == null || b == null) return 0;
+		let d = b - a; // -11..+11
+		while(d < -5) d += 12;
+		while(d > 6) d -= 12;
+		return d;
+	}
+	function getEncodedTitleParam(){
+		// 1) フォームから（これが一番確実）
+		const input = document.querySelector('#key [name="t"]');
+		if(input && input.value){
+			return encodeURIComponent(input.value);
+		}
+
+		// 2) すでに ?t=... が付いている場合
+		try{
+			const u = new URL(location.href);
+			const t = u.searchParams.get('t');
+			if(t){
+			// 2重エンコード対策
+			return encodeURIComponent(decodeURIComponent(t));
+			}
+		}catch(e){ /* noop */ }
+
+		// 3) /wiki/<タイトル> 形式から
+		const m = location.pathname.match(/\/wiki\/(.+)/);
+		if(m && m[1]){
+			try{
+			// 既にエンコードされているので一旦 decode → encode で正規化
+			return encodeURIComponent(decodeURIComponent(m[1]));
+			}catch(e){
+			// そのまま使う（既にエンコード済み想定）
+			return m[1];
+			}
+		}
+
+		// 4) og:title から
+		const og = document.querySelector('meta[property="og:title"]')?.content;
+		if(og){
+			return encodeURIComponent(og.trim());
+		}
+
+		return ""; // 最後の砦
+	}
+	function getCurrentKeyParam(){
+		try{
+			const u = new URL(location.href);
+			const k = parseInt(u.searchParams.get('key'), 10);
+			if(Number.isFinite(k)) return Math.max(-12, Math.min(12, k));
+		}catch(e){}
+		return 0;
+	}
+	function normalizeKeyParam(d){
+		// 0..11 に畳み込んでから [-6..+6] に丸める（-6 は +6 に寄せる仕様）
+		d = ((d % 12) + 12) % 12; // 0..11
+		if(d <= 6) return d; // 0..6
+		return d - 12; // -5..-1
+	}
+	function buildTransposeUrl(targetMajor){
+		const currMajor = getCurrentMajorKeyForTranspose(); // 現在表示のメジャー
+		const currParam = getCurrentKeyParam(); // 現在の ?key=（元→現在 の移調量）
+
+		const currPc = nameToPc(currMajor);
+		const targetPc = nameToPc(targetMajor);
+		if(currPc == null || targetPc == null){
+			return location.href; // フォールバック
+		}
+
+		// 元キー(メジャー)のPCを逆算： current = original + currParam
+		const originalPc = ((currPc - currParam) % 12 + 12) % 12;
+
+		// 目的キーへの総移調量 = target - original
+		let total = normalizeKeyParam(targetPc - originalPc); // [-6..+6]
+		if(total === -6) total = 6; // サイト仕様に合わせる
+
+		const tEnc = getEncodedTitleParam();
+		const origin = location.origin || (location.protocol + '//' + location.host);
+		return `${origin}/wiki.cgi?c=view&t=${tEnc}&key=${total}&symbol=`;
+	}
+	// Play の表示が動的更新されたらラベルも更新
+	function updateTransposeBarLabel(){
+		const label = document.getElementById('cw-transpose-label');
+		if(!label) return;
+		const currMajor = getCurrentMajorKeyForTranspose();
+		label.textContent = `現在 key: ${currMajor}`;
+	}
 	function update(){
 		if(updating)return;
 		updating = true;
