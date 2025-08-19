@@ -2,7 +2,7 @@
 // @name			[chordwiki] コード to ディグリー
 // @description			ja.chordwiki.orgのキーが明記されいるページのコード名をディグリーに変換（キー未表記ページは推定）
 // @namespace		https://greasyfork.org/ja/users/1023652
-// @version			2.0.0.0
+// @version			2.0.0.1
 // @author			ゆにてぃー
 // @match			https://ja.chordwiki.org/wiki*
 // @icon			https://www.google.com/s2/favicons?sz=64&domain=ja.chordwiki.org
@@ -533,6 +533,9 @@
 			sel.appendChild(opt);
 		}
 		sel.value = selectedValue || "-";
+		if(isMobileView()){
+			line.style.marginTop = "32px";
+		}
 		return sel;
 	}
 
@@ -562,32 +565,36 @@
 	}
 
 	async function restoreSavedSelections(){
-		const lines = [...document.querySelectorAll("p.line")].filter(l=>l.className === "line");
-		if(!lines.length)return;
+		try{
+			const lines = [...document.querySelectorAll("p.line")].filter(l=>l.className === "line");
+			if(!lines.length)return;
 
-		const key = b64EncodeUtf8(document.querySelector('#key [name="t"]')?.value || document.querySelector('head meta[property="og:title"]')?.content);
-		const all = await getFromIndexedDB('cw-degree', 'line-key-overrides');
-		const entry = all[key];
-		if(!entry || !entry.lines)return;
+			const key = b64EncodeUtf8(document.querySelector('#key [name="t"]')?.value || document.querySelector('head meta[property="og:title"]')?.content);
+			const all = await getFromIndexedDB('cw-degree', 'line-key-overrides');
+			const entry = all?.[key];
+			if(!entry || !entry?.lines)return;
 
-		// 反映
-		for(const [idxStr,val] of Object.entries(entry.lines)){
-			const idx = parseInt(idxStr,10);
-			if(Number.isNaN(idx))continue;
-			const line = lines[idx];
-			if(!line)continue;
-			const sel = line.querySelector(":scope > select.cw-line-key");
-			if(!sel)continue;
-			sel.value = val;
-			sel.dataset.isUserEdited = true; // ユーザー編集済みフラグ
-			line.dataset.effectiveKey = val;
-			updateLineKeySelectColor(sel);
-		}
-
-		if(isDeg){
-			for(let i=0;i<lines.length;i++){
-				processLine(lines[i], lines[i].dataset.effectiveKey || null, "deg");
+			// 反映
+			for(const [idxStr,val] of Object.entries(entry.lines)){
+				const idx = parseInt(idxStr,10);
+				if(Number.isNaN(idx))continue;
+				const line = lines[idx];
+				if(!line)continue;
+				const sel = line.querySelector(":scope > select.cw-line-key");
+				if(!sel)continue;
+				sel.value = val;
+				sel.dataset.isUserEdited = true; // ユーザー編集済みフラグ
+				line.dataset.effectiveKey = val;
+				updateLineKeySelectColor(sel);
 			}
+
+			if(isDeg){
+				for(let i=0;i<lines.length;i++){
+					processLine(lines[i], lines[i].dataset.effectiveKey || null, "deg");
+				}
+			}
+		}catch(e){
+			console.error("Error restoring saved selections:", e);
 		}
 	}
 
