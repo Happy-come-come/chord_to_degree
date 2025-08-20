@@ -10,7 +10,7 @@ ja.chordwiki.orgのキーが明記されいるページのコード名をディ�
 キーの推論はAIに手伝ってもらった<br>
 
 # インストール
-[Tampermonkey](https://www.tampermonkey.net/) をインストールして、 https://greasyfork.org/ja/scripts/546170 ユーザースクリプトとしてインストールするのがオススメ！！<br>
+[Tampermonkey](https://www.tampermonkey.net/) をインストールして、 https://greasyfork.org/ja/scripts/546170 このページからユーザースクリプトとしてインストールするのがオススメ！！<br>
 自動更新してくれるから不具合を気にせず使えるし！<br>
 
 ## どうしても上の方法が嫌な場合<br>
