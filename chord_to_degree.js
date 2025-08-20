@@ -2,7 +2,7 @@
 // @name			[chordwiki] コード to ディグリー
 // @description			ja.chordwiki.orgのキーが明記されいるページのコード名をディグリーに変換（キー未表記ページは推定）
 // @namespace		https://greasyfork.org/ja/users/1023652
-// @version			2.0.0.1
+// @version			2.0.0.2
 // @author			ゆにてぃー
 // @match			https://ja.chordwiki.org/wiki*
 // @icon			https://www.google.com/s2/favicons?sz=64&domain=ja.chordwiki.org
@@ -662,7 +662,7 @@
 		}
 
 		// 2) ベースのみ "/C" など
-		const mSlash = s.match(/^\/\s*([A-G](?:#|b)?)\s*$/i);
+		const mSlash = s.match(/^\/\s*([A-G](?:#{1,2}|b{1,2})?)\s*$/i);
 		if(mSlash){
 			if(!romanMap || !keyAcc)return s;
 			const bass = mSlash[1];
@@ -671,7 +671,7 @@
 		}
 
 		// 3) 通常パターン
-		const re = /^([A-G](?:#|b)?)(.*?)(?:\/([A-G](?:#|b)?))?$/i;
+		const re = /^([A-G](?:#{1,2}|b{1,2})?)(.*?)(?:\/([A-G](?:#{1,2}|b{1,2})?))?$/i;
 		const m = s.match(re);
 		if(!m)return s;
 
@@ -682,21 +682,33 @@
 	}
 
 	function noteToDegree(note,romanMap,keyAcc){
-		const m = (note || "").match(/^([A-G])([#b])?$/i);
+		const m = (note || "").match(/^([A-G])((?:#{1,2}|b{1,2})?)$/i); // 0〜2個まで
 		if(!m)return note;
 		const letter = m[1].toUpperCase();
-		const acc = m[2] || "";
+		const accStr = m[2] || "";
 		const base = romanMap[letter] || letter;
-		const dia = keyAcc[letter] || "";
-		let rel = "";
-		if(acc === dia)rel = "";
-		else if(acc === "" && dia === "#")rel = "b";
-		else if(acc === "" && dia === "b")rel = "#";
-		else if(acc === "#" && dia === "")rel = "#";
-		else if(acc === "b" && dia === "")rel = "b";
-		else if(acc === "#" && dia === "b")rel = "##";
-		else if(acc === "b" && dia === "#")rel = "bb";
+		const dia = keyAcc[letter] || ""; 
+
+		const accNum = accToNum(accStr);
+		const diaNum = accToNum(dia);
+		const diff = accNum - diaNum;
+		const rel = numToAcc(diff);
 		return base + rel;
+
+		function accToNum(s){
+			if(!s)return 0;
+			if(/^#{1,2}$/.test(s))return s.length;  // "#":1, "##":2
+			if(/^b{1,2}$/.test(s))return -s.length; // "b":-1, "bb":-2
+			return 0;
+		}
+		function numToAcc(n){
+			if(n === 0)return "";
+			if(n === 1)return "#";
+			if(n === 2)return "##";
+			if(n === -1)return "b";
+			if(n === -2)return "bb";
+			return n > 0 ? "##" : "bb";
+		}
 	}
 
 	function buildLetterOrder(key){
@@ -772,7 +784,7 @@
 					explicitKey = bestKey || "C";
 				}else{
 					// 転調判定（相対差）
-					const prevScore = tokens.length ? bestKeyAndScore(tokens).bestScore : 0;
+					//const prevScore = tokens.length ? bestKeyAndScore(tokens).bestScore : 0;
 					// prev側のスコアを明示的に計算
 					const prevSide = prevEffective ? (function(){
 						let s = 0; for(let i=0;i<tokens.length;i++) s += (function(ch){
@@ -861,7 +873,7 @@
 				for(let j=0;j<spans.length;j++){
 					const raw = (spans[j].dataset.originalChord || spans[j].textContent || "").trim();
 					const t = parseChordSymbolBasic(raw);
-					if(t) tokens.push(t);
+					if(t)tokens.push(t);
 				}
 			}
 			return tokens;
@@ -875,11 +887,11 @@
 				if(wrap) s = wrap[2];
 
 				// ベースのみ "/C"
-				let m = s.match(/^\/\s*([A-G](?:#|b)?)\s*$/i);
+				let m = s.match(/^\/\s*([A-G](?:#{1,2}|b{1,2})?)\s*$/i);
 				if(m) return {root:null, bass:m[1].toUpperCase(), quality:null, isDom7:false, isHalfDim:false};
 
 				// ルート(+修飾)(/ベース)
-				m = s.match(/^([A-G](?:#|b)?)(.*?)(?:\/([A-G](?:#|b)?))?$/i);
+				m = s.match(/^([A-G](?:#{1,2}|b{1,2})?)(.*?)(?:\/([A-G](?:#{1,2}|b{1,2})?))?$/i);
 				if(!m) return null;
 
 				const root = m[1].toUpperCase();
@@ -930,7 +942,9 @@
 				const k = keyCandidates[i];
 				const raw = scoreTokensForKey(tokens, k);
 				// #優勢なら #が多いキー名へ、b優勢なら bが多いキー名へ微調整
-				const adj = raw + BIAS_W * Math.sign(bias) * Math.abs(keySharpnessIndex(k));
+				const biasSign = Math.sign(bias);
+				const biasMag  = Math.min(Math.abs(bias), 6) / 6;
+				const adj = raw + BIAS_W * biasMag * biasSign * keySharpnessIndex(k);
 				if(adj > bestScore){
 					bestScore = adj;
 					bestKey = k;
