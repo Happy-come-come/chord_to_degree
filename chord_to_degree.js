@@ -2,9 +2,10 @@
 // @name			[chordwiki] コード to ディグリー
 // @description			ja.chordwiki.orgのキーが明記されいるページのコード名をディグリーに変換（キー未表記ページは推定）
 // @namespace		https://greasyfork.org/ja/users/1023652
-// @version			2.0.0.2
+// @version			2.0.0.3
 // @author			ゆにてぃー
 // @match			https://ja.chordwiki.org/wiki*
+// @match			https://ja.chordwiki.org/amp*
 // @icon			https://www.google.com/s2/favicons?sz=64&domain=ja.chordwiki.org
 // @license			MIT
 // ==/UserScript==
