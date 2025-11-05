@@ -2,7 +2,7 @@
 // @name			[chordwiki] コード to ディグリー
 // @description			ja.chordwiki.orgのキーが明記されいるページのコード名をディグリーに変換（キー未表記ページは推定）
 // @namespace		https://greasyfork.org/ja/users/1023652
-// @version			2.0.0.4
+// @version			2.0.0.5
 // @author			ゆにてぃー
 // @match			https://ja.chordwiki.org/wiki*
 // @match			https://ja.chordwiki.org/amp*
@@ -16,6 +16,7 @@
 	const debugging = false;
 	const debug = debugging ? console.log : ()=>{};
 	const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+	const isMobile = isMobileView();
 
 	// 転調判定のしきい値
 	const MOD_MIN_FIRST = 1.5; // ブロック内ベストキーの最低スコア
@@ -515,7 +516,7 @@
 						opacity: '0.85',
 						zIndex: '2147483647',
 						...(
-							isMobileView() 
+							isMobile
 							? {	background: '#f3f4f6', border: '1px solid #d1d5db',
 								left: "5px", top: "-30px"}
 							: {	left: "-60px", top: "-16px"}
@@ -525,18 +526,23 @@
 			);
 		const KEY_OPTIONS = [
 			"-",
-			"C","G","D","A","E","B","F#","C#","F","Bb","Eb","Ab","Db","Gb","Cb",
-			"Am","Em","Bm","F#m","C#m","G#m","D#m","A#m","Dm","Gm","Cm","Fm","Bbm","Ebm","Abm"
+			"C","C#","Db","D","D#","Eb","E","F","F#","Gb","G","G#","Ab","A","A#","Bb","B",
+			"Am","A#m","Bbm","Bm","Cm","C#m","Dbm","Dm","D#m","Ebm","Em","Fm","F#m","Gbm","Gm","G#m","Abm",
 		];
-		for(let i=0; i < KEY_OPTIONS.length; i++){
-			const k = KEY_OPTIONS[i];
+		for(let k of Object.keys(KEY_OPTIONS)){
 			const opt = document.createElement("option");
-			opt.value = k; opt.textContent = k;
+			opt.value = KEY_OPTIONS[k];
+			opt.textContent = KEY_OPTIONS[k];
 			sel.appendChild(opt);
 		}
 		sel.value = selectedValue || "-";
-		if(isMobileView()){
+		if(isMobile){
 			line.style.marginTop = "32px";
+		}else if(document.location.href.match(/ja\.chordwiki\.org\/amp/)){
+			const main = document.querySelector('.main');
+			if(main){
+				main.style.paddingLeft = "80px";
+			}
 		}
 		return sel;
 	}
