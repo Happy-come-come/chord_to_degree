@@ -2,7 +2,7 @@
 // @name			[chordwiki] コード to ディグリー
 // @description			ja.chordwiki.orgのキーが明記されいるページのコード名をディグリーに変換（キー未表記ページは推定）
 // @namespace		https://greasyfork.org/ja/users/1023652
-// @version			2.0.0.5
+// @version			2.0.0.6
 // @author			ゆにてぃー
 // @match			https://ja.chordwiki.org/wiki*
 // @match			https://ja.chordwiki.org/amp*
@@ -526,7 +526,7 @@
 			);
 		const KEY_OPTIONS = [
 			"-",
-			"C","C#","Db","D","D#","Eb","E","F","F#","Gb","G","G#","Ab","A","A#","Bb","B",
+			"C","C#","Db","D","D#","Eb","E","F","F#","Gb","G","G#","Ab","A","A#","Bb","B","Cb",
 			"Am","A#m","Bbm","Bm","Cm","C#m","Dbm","Dm","D#m","Ebm","Em","Fm","F#m","Gbm","Gm","G#m","Abm",
 		];
 		for(let k of Object.keys(KEY_OPTIONS)){
